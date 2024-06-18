@@ -117,7 +117,7 @@ func main() {
 		c.Writer.Write(jsonResponse)
 	})
 
-	r.Run(":8080")
+	r.Run(":0.0.0.0")
 }
 
 // Function to send a document using Telegram Bot API sendDocument method
