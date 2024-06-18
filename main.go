@@ -7,9 +7,11 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"os"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"main.go/initializers"
 )
 
 type Response struct {
@@ -22,6 +24,10 @@ type ImageData struct {
 	FileID   string `json:"file_id"`
 	FileURL  string `json:"file_url"`
 	FileSize int    `json:"file_size"`
+}
+
+func init() {
+	initializers.LoadEnvironment()
 }
 
 func main() {
@@ -117,7 +123,7 @@ func main() {
 		c.Writer.Write(jsonResponse)
 	})
 
-	r.Run(":0.0.0.0")
+	r.Run(os.Getenv("PORT"))
 }
 
 // Function to send a document using Telegram Bot API sendDocument method
