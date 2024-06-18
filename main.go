@@ -123,7 +123,7 @@ func main() {
 		c.Writer.Write(jsonResponse)
 	})
 
-	r.Run(os.Getenv("PORT"))
+	r.Run(":"+os.Getenv("PORT"))
 }
 
 // Function to send a document using Telegram Bot API sendDocument method
