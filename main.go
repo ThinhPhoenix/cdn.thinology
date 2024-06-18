@@ -38,6 +38,12 @@ func main() {
     config.AllowAllOrigins = true
     r.Use(cors.New(config))
 
+	r.GET("/", func(c *gin.Context){
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Hello World!",
+		})
+	})
+
 	r.POST("/upload", func(c *gin.Context) {
 		botToken := c.PostForm("bot_token")
 		chatID := c.PostForm("chat_id")
