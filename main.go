@@ -359,11 +359,10 @@ func getFileInfo(botToken, fileID string) (string, int, error) {
 	}
 
 	if !getFileResp.Ok {
-		return "", 0, fmt.Errorf("telegram API returned not ok status")
+		return "", 0, fmt.Errorf("telegram API returned not ok status: %s", resp.Status)
 	}
 
-	fileURL := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", botToken, getFileResp.Result.FilePath)
-	fileSize := getFileResp.Result.FileSize
+	finalURL := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", botToken, getFileResp.Result.FilePath)
 
-	return fileURL, fileSize, nil
+	return finalURL, getFileResp.Result.FileSize, nil
 }
