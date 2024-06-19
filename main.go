@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/gin-contrib/cors"
@@ -47,6 +48,22 @@ func generateSecureURL(fileURL string) string {
 	return id
 }
 
+func isURLFile(url string) (bool, string, int64, error) {
+	resp, err := http.Head(url)
+	if err != nil {
+		return false, "", 0, err
+	}
+	defer resp.Body.Close()
+
+	contentType := resp.Header.Get("Content-Type")
+	contentLength := resp.ContentLength
+
+	// Check if Content-Type indicates a file (you can customize this based on your needs)
+	isFile := strings.HasPrefix(contentType, "image/") || strings.HasPrefix(contentType, "application/") || strings.HasPrefix(contentType, "video/") || strings.HasPrefix(contentType, "audio/")
+
+	return isFile, contentType, contentLength, nil
+}
+
 func getActualURL(secureID string) (string, bool) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -73,12 +90,12 @@ func main() {
 	r.POST("/send", func(c *gin.Context) {
 		botToken := c.PostForm("bot_token")
 		chatID := c.PostForm("chat_id")
-	
+
 		var fileID string
 		var fileURL string
 		var fileSize int
 		var err error
-	
+
 		fileHeader, err := c.FormFile("document")
 		if err == nil {
 			// File is uploaded
@@ -88,13 +105,13 @@ func main() {
 				return
 			}
 			defer file.Close()
-	
+
 			fileID, err = sendDocument(botToken, chatID, file, fileHeader.Filename)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to send document: %v", err)})
 				return
 			}
-	
+
 			fileURL, fileSize, err = getFileInfo(botToken, fileID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get file info: %v", err)})
@@ -104,40 +121,55 @@ func main() {
 			// Treat document as text input (file URL)
 			fileURL = c.PostForm("document")
 			fileSize = 0 // Assuming fileSize is not relevant for text inputs
+
+			// Check if the file URL points to a valid file
+			isFile, contentType, contentLength, err := isURLFile(fileURL)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to check URL: %v", err)})
+				return
+			}
+
+			if !isFile {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "URL does not point to a file"})
+				return
+			}
+
+			// Optionally, you can use the content type and length if needed
+			fmt.Printf("Content Type: %s, Content Length: %d\n", contentType, contentLength)
 		}
-	
+
 		// Generate secure URL
 		scheme := c.Request.Header.Get("X-Forwarded-Proto")
 		if scheme == "" {
 			scheme = "http"
 		}
-	
+
 		secureID := generateSecureURL(fileURL)
 		secureURL := fmt.Sprintf("%s://%s/drive/%s", scheme, c.Request.Host, secureID)
-	
+
 		fileData := FileData{
 			FileID:    fileID,
 			FileURL:   fileURL,
 			SecureURL: secureURL,
 			FileSize:  fileSize,
 		}
-	
+
 		response := Response{
 			Success: true,
 			Message: "File uploaded successfully",
 			Data:    fileData,
 		}
-	
+
 		jsonResponse, err := json.Marshal(response)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal JSON response"})
 			return
 		}
-	
+
 		c.Header("Content-Type", "application/json")
 		c.Status(http.StatusOK)
 		c.Writer.Write(jsonResponse)
-	})	
+	})
 
 	r.GET("/url", func(c *gin.Context) {
 		botToken := c.Query("bot_token")
