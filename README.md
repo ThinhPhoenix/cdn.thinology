@@ -35,6 +35,7 @@ telikou_cdn is a Content Delivery Network (CDN) system that utilizes the Telegra
     go get github.com/gin-contrib/cors
     go get github.com/gin-gonic/gin
     go get github.com/joho/godotenv
+    go get github.com/google/uuid
     ```
 
 4. Run the project:

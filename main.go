@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"main.go/initializers"
 )
 
@@ -40,11 +40,11 @@ var (
 )
 
 func generateSecureURL(fileURL string) string {
-	uniqueID := fmt.Sprintf("%d", time.Now().UnixNano())
+	id := uuid.New().String()
 	mu.Lock()
-	secureURLs[uniqueID] = fileURL
+	secureURLs[id] = fileURL
 	mu.Unlock()
-	return uniqueID
+	return id
 }
 
 func getActualURL(secureID string) (string, bool) {
@@ -183,8 +183,11 @@ func main() {
 			contentType = "application/octet-stream"
 		}
 
+		// Generate a secure or user-friendly filename
+		filename := secureID + ".png" // Example: Replace with your logic to generate a filename
+
 		c.Header("Content-Type", contentType)
-		c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", fileURL))
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 		c.Status(resp.StatusCode)
 		io.Copy(c.Writer, resp.Body)
 	})
