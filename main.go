@@ -73,63 +73,71 @@ func main() {
 	r.POST("/send", func(c *gin.Context) {
 		botToken := c.PostForm("bot_token")
 		chatID := c.PostForm("chat_id")
-
+	
+		var fileID string
+		var fileURL string
+		var fileSize int
+		var err error
+	
 		fileHeader, err := c.FormFile("document")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "File upload failed"})
-			return
+		if err == nil {
+			// File is uploaded
+			file, err := fileHeader.Open()
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
+				return
+			}
+			defer file.Close()
+	
+			fileID, err = sendDocument(botToken, chatID, file, fileHeader.Filename)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to send document: %v", err)})
+				return
+			}
+	
+			fileURL, fileSize, err = getFileInfo(botToken, fileID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get file info: %v", err)})
+				return
+			}
+		} else {
+			// Treat document as text input (file URL)
+			fileURL = c.PostForm("document")
+			fileSize = 0 // Assuming fileSize is not relevant for text inputs
 		}
-
-		file, err := fileHeader.Open()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
-			return
-		}
-		defer file.Close()
-
-		fileID, err := sendDocument(botToken, chatID, file, fileHeader.Filename)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to send document: %v", err)})
-			return
-		}
-
-		fileURL, fileSize, err := getFileInfo(botToken, fileID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get file info: %v", err)})
-			return
-		}
-
+	
+		// Generate secure URL
 		scheme := c.Request.Header.Get("X-Forwarded-Proto")
 		if scheme == "" {
 			scheme = "http"
 		}
-
+	
 		secureID := generateSecureURL(fileURL)
 		secureURL := fmt.Sprintf("%s://%s/drive/%s", scheme, c.Request.Host, secureID)
-
+	
 		fileData := FileData{
 			FileID:    fileID,
 			FileURL:   fileURL,
 			SecureURL: secureURL,
 			FileSize:  fileSize,
 		}
-
+	
 		response := Response{
 			Success: true,
 			Message: "File uploaded successfully",
 			Data:    fileData,
 		}
-
+	
 		jsonResponse, err := json.Marshal(response)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal JSON response"})
 			return
 		}
-
+	
 		c.Header("Content-Type", "application/json")
 		c.Status(http.StatusOK)
 		c.Writer.Write(jsonResponse)
-	})
+	})	
 
 	r.GET("/url", func(c *gin.Context) {
 		botToken := c.Query("bot_token")
