@@ -8,6 +8,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -21,13 +23,35 @@ type Response struct {
 }
 
 type FileData struct {
-	FileID   string `json:"file_id"`
-	FileURL  string `json:"file_url"`
-	FileSize int    `json:"file_size"`
+	FileID    string `json:"file_id"`
+	FileURL   string `json:"file_url"`
+	SecureURL string `json:"secure_url"`
+	FileSize  int    `json:"file_size"`
 }
 
 type UrlData struct {
-	FileURL  string `json:"file_url"`
+	FileURL   string `json:"file_url"`
+	SecureURL string `json:"secure_url"`
+}
+
+var (
+	secureURLs = make(map[string]string)
+	mu         sync.Mutex
+)
+
+func generateSecureURL(fileURL string) string {
+	uniqueID := fmt.Sprintf("%d", time.Now().UnixNano())
+	mu.Lock()
+	secureURLs[uniqueID] = fileURL
+	mu.Unlock()
+	return uniqueID
+}
+
+func getActualURL(secureID string) (string, bool) {
+	mu.Lock()
+	defer mu.Unlock()
+	fileURL, exists := secureURLs[secureID]
+	return fileURL, exists
 }
 
 func init() {
@@ -36,8 +60,6 @@ func init() {
 
 func main() {
 	r := gin.Default()
-
-	// CORS middleware
 	config := cors.DefaultConfig()
 	config.AllowAllOrigins = true
 	r.Use(cors.New(config))
@@ -77,10 +99,14 @@ func main() {
 			return
 		}
 
+		secureID := generateSecureURL(fileURL)
+		secureURL := fmt.Sprintf("/drive/%s", secureID)
+
 		fileData := FileData{
-			FileID:   fileID,
-			FileURL:  fileURL,
-			FileSize: fileSize,
+			FileID:    fileID,
+			FileURL:   fileURL,
+			SecureURL: secureURL,
+			FileSize:  fileSize,
 		}
 
 		response := Response{
@@ -111,8 +137,12 @@ func main() {
 			return
 		}
 
-		urlData := UrlData {
-			FileURL: fileURL,
+		secureID := generateSecureURL(fileURL)
+		secureURL := fmt.Sprintf("/drive/%s", secureID)
+
+		urlData := UrlData{
+			FileURL:   fileURL,
+			SecureURL: secureURL,
 		}
 
 		response := Response{
@@ -132,20 +162,44 @@ func main() {
 		c.Writer.Write(jsonResponse)
 	})
 
+	r.GET("/drive/:id", func(c *gin.Context) {
+		secureID := c.Param("id")
+
+		fileURL, exists := getActualURL(secureID)
+		if !exists {
+			c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+			return
+		}
+
+		resp, err := http.Get(fileURL)
+		if err != nil || resp.StatusCode != http.StatusOK {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch file"})
+			return
+		}
+		defer resp.Body.Close()
+
+		contentType := resp.Header.Get("Content-Type")
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+
+		c.Header("Content-Type", contentType)
+		c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", fileURL))
+		c.Status(resp.StatusCode)
+		io.Copy(c.Writer, resp.Body)
+	})
+
 	r.Run(":" + os.Getenv("PORT"))
 }
 
-// Function to send a document using Telegram Bot API sendDocument method
 func sendDocument(botToken, chatID string, file io.Reader, fileName string) (string, error) {
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendDocument", botToken)
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	// Add chat_id field
 	_ = writer.WriteField("chat_id", chatID)
 
-	// Add document file
 	part, err := writer.CreateFormFile("document", fileName)
 	if err != nil {
 		return "", fmt.Errorf("failed to create form file: %v", err)
@@ -155,20 +209,17 @@ func sendDocument(botToken, chatID string, file io.Reader, fileName string) (str
 		return "", fmt.Errorf("failed to copy file contents: %v", err)
 	}
 
-	// Close multipart writer
 	err = writer.Close()
 	if err != nil {
 		return "", fmt.Errorf("failed to close multipart writer: %v", err)
 	}
 
-	// Create HTTP request
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		return "", fmt.Errorf("failed to create HTTP request: %v", err)
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	// Send request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -176,7 +227,6 @@ func sendDocument(botToken, chatID string, file io.Reader, fileName string) (str
 	}
 	defer resp.Body.Close()
 
-	// Read response body
 	var sendDocResp struct {
 		Ok     bool `json:"ok"`
 		Result struct {
@@ -190,7 +240,7 @@ func sendDocument(botToken, chatID string, file io.Reader, fileName string) (str
 	}
 
 	if !sendDocResp.Ok {
-		return "", fmt.Errorf("!Telegram API returned not ok status")
+		return "", fmt.Errorf("telegram API returned not ok status")
 	}
 
 	fileID := sendDocResp.Result.Document.FileID
@@ -198,7 +248,6 @@ func sendDocument(botToken, chatID string, file io.Reader, fileName string) (str
 	return fileID, nil
 }
 
-// Function to get file information using Telegram Bot API getFile method
 func getFileInfo(botToken, fileID string) (string, int, error) {
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/getFile?file_id=%s", botToken, fileID)
 
@@ -208,7 +257,6 @@ func getFileInfo(botToken, fileID string) (string, int, error) {
 	}
 	defer resp.Body.Close()
 
-	// Read response body
 	var getFileResp struct {
 		Ok     bool `json:"ok"`
 		Result struct {
@@ -221,7 +269,7 @@ func getFileInfo(botToken, fileID string) (string, int, error) {
 	}
 
 	if !getFileResp.Ok {
-		return "", 0, fmt.Errorf("!Telegram API returned not ok status")
+		return "", 0, fmt.Errorf("telegram API returned not ok status")
 	}
 
 	finalURL := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", botToken, getFileResp.Result.FilePath)
