@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -285,12 +286,21 @@ func main() {
 func sendDocument(botToken, chatID string, file io.Reader, fileName string) (string, error) {
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendDocument", botToken)
 
+	// Generate a secure ID for the filename
+	secureID := uuid.New().String()
+
+	// Extract file extension from original fileName
+	fileExt := filepath.Ext(fileName)
+
+	// Rename the file to secureID.file_extension
+	newFileName := secureID + fileExt
+
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
 	_ = writer.WriteField("chat_id", chatID)
 
-	part, err := writer.CreateFormFile("document", fileName)
+	part, err := writer.CreateFormFile("document", newFileName)
 	if err != nil {
 		return "", fmt.Errorf("failed to create form file: %v", err)
 	}
