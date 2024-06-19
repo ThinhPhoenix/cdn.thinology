@@ -192,6 +192,38 @@ func main() {
 		io.Copy(c.Writer, resp.Body)
 	})
 
+	r.GET("/file-info", func(c *gin.Context) {
+		botToken := c.Query("bot_token")
+		fileID := c.Query("file_id")
+
+		fileURL, fileSize, err := getFileInfo(botToken, fileID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"message": fmt.Sprintf("Failed to get file info: %v", err),
+			})
+			return
+		}
+
+		secureID := generateSecureURL(fileURL)
+		secureURL := fmt.Sprintf("/drive/%s", secureID)
+
+		fileData := FileData{
+			FileID:    fileID,
+			FileURL:   fileURL,
+			SecureURL: secureURL,
+			FileSize:  fileSize,
+		}
+
+		response := Response{
+			Success: true,
+			Message: "Get file information successfully",
+			Data:    fileData,
+		}
+
+		c.JSON(http.StatusOK, response)
+	})
+
 	r.Run(":" + os.Getenv("PORT"))
 }
 
