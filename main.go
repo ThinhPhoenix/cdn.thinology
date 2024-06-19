@@ -99,8 +99,13 @@ func main() {
 			return
 		}
 
+		scheme := c.Request.Header.Get("X-Forwarded-Proto")
+		if scheme == "" {
+			scheme = "http"
+		}
+
 		secureID := generateSecureURL(fileURL)
-		secureURL := fmt.Sprintf("/drive/%s", secureID)
+		secureURL := fmt.Sprintf("%s://%s/drive/%s", scheme, c.Request.Host, secureID)
 
 		fileData := FileData{
 			FileID:    fileID,
@@ -137,8 +142,13 @@ func main() {
 			return
 		}
 
+		scheme := c.Request.Header.Get("X-Forwarded-Proto")
+		if scheme == "" {
+			scheme = "http"
+		}
+
 		secureID := generateSecureURL(fileURL)
-		secureURL := fmt.Sprintf("/drive/%s", secureID)
+		secureURL := fmt.Sprintf("%s://%s/drive/%s", scheme, c.Request.Host, secureID)
 
 		urlData := UrlData{
 			FileURL:   fileURL,
@@ -205,8 +215,13 @@ func main() {
 			return
 		}
 
+		scheme := c.Request.Header.Get("X-Forwarded-Proto")
+		if scheme == "" {
+			scheme = "http"
+		}
+
 		secureID := generateSecureURL(fileURL)
-		secureURL := fmt.Sprintf("/drive/%s", secureID)
+		secureURL := fmt.Sprintf("%s://%s/drive/%s", scheme, c.Request.Host, secureID)
 
 		fileData := FileData{
 			FileID:    fileID,
@@ -307,7 +322,8 @@ func getFileInfo(botToken, fileID string) (string, int, error) {
 		return "", 0, fmt.Errorf("telegram API returned not ok status")
 	}
 
-	finalURL := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", botToken, getFileResp.Result.FilePath)
+	fileURL := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", botToken, getFileResp.Result.FilePath)
+	fileSize := getFileResp.Result.FileSize
 
-	return finalURL, getFileResp.Result.FileSize, nil
+	return fileURL, fileSize, nil
 }
