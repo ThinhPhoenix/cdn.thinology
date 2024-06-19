@@ -1,64 +1,110 @@
-# telikou_cdn
+  telikou\_cdn
 
-telikou_cdn is a Content Delivery Network (CDN) system that utilizes the Telegram Bot API as a storage solution for files. This project provides a lightweight and cost-effective way to host and serve files by leveraging the Telegram infrastructure.
+telikou\_cdn
+============
 
-## Features
+`telikou_cdn` is a lightweight Content Delivery Network (CDN) that leverages the Telegram Bot API for file storage and retrieval. This project provides a cost-effective solution for hosting files and serving them via a CDN-like infrastructure using Telegram's robust backend.
 
-- Upload files to the Telegram Bot API and receive a unique file URL for accessing the content
-- Retrieve file URLs and metadata (file size, etc.) using the provided API endpoints
-- Cross-Origin Resource Sharing (CORS) support for seamless integration with web applications
+**Author:** Lai Chi Thinh (ThinhPhoenix) - FPT University.
 
-## Getting Started
+Features
+--------
+
+*   **File Upload:** Upload files to Telegram Bot API and receive a unique file URL for accessing the content.
+*   **File Metadata Retrieval:** Retrieve file URLs and metadata (such as file size) using dedicated API endpoints.
+*   **CORS Support:** Seamless integration with web applications through Cross-Origin Resource Sharing configuration.
+
+Pros
+----
+
+*   **Unlimited Storage:** Utilizes Telegram's cloud storage for files, offering virtually unlimited capacity.
+*   **Easy to Use:** Integration with Telegram Bot API simplifies file upload and retrieval operations.
+*   **Free:** No additional cost for storage or bandwidth usage beyond what Telegram charges for bot API usage.
+
+Cons
+----
+
+*   **Automatic Removal:** Files may be removed if Telegram considers them inactive for a prolonged period due to privacy policies and storage management.
+
+Getting Started
+---------------
 
 ### Prerequisites
 
-- Go programming language (version 1.16 or later)
-- Telegram Bot API token (obtain one by creating a new bot using the BotFather)
+*   Go programming language (version 1.16 or later)
+*   Telegram Bot API token (obtain one by creating a new bot using BotFather)
 
 ### Installation
 
-1. Clone the repository:
+1.  **Clone the repository:**
+```bash
+git clone https://github.com/ThinhPhoenix/telikou_cdn.git
+cd telikou_cdn
+```    
 
-    ```bash
-    git clone https://github.com/ThinhPhoenix/telikou_cdn.git
-    ```
+3.  **Install dependencies:**
+```golang
+go get github.com/gin-contrib/cors
+go get github.com/gin-gonic/gin
+go get github.com/google/uuid
+go get github.com/joho/godotenv
+```       
+5.  **Run the project:**
+```golang
+go run main.go
+```      
 
-2. Navigate to the project directory:
+The server will start running on [http://localhost:8080](http://localhost:8080) by default.
 
-    ```bash
-    cd telikou_cdn
-    ```
+Usage
+-----
 
-3. Install the required dependencies:
+### Upload a File
 
-    ```go
-    go get github.com/gin-contrib/cors
-    go get github.com/gin-gonic/gin
-    go get github.com/joho/godotenv
-    go get github.com/google/uuid
-    ```
+To upload a file, send a POST request to the `/send` endpoint with the following form data:
 
-4. Run the project:
+*   `bot_token`: Your Telegram Bot API token
+*   `chat_id`: The chat ID where you want to upload the file (you can use your own chat ID or a group/channel ID)
+*   `document`: The file you want to upload
 
-    ```go
-    go run ./telikou_cdn
-    ```
+Example:
 
-    The server will start running on [http://localhost:8080](http://localhost:8080) by default.
+    curl -X POST -F "bot_token=<your_bot_token>" -F "chat_id=<your_chat_id>" -F "document=@/path/to/your/file" http://localhost:8080/send
+      
 
-### Usage
-
-#### Upload a File
-
-To upload a file, send a POST request to the `/upload` endpoint with the following form data:
-
-- `bot_token`: Your Telegram Bot API token
-- `chat_id`: The chat ID where you want to upload the file (you can use your own chat ID or a group/channel ID)
-- `document`: The file you want to upload
-
-#### Get File URL
+### Get File URL
 
 To retrieve the file URL, send a GET request to the `/url` endpoint with the following query parameters:
 
-- `bot_token`: Your Telegram Bot API token
-- `file_id`: The file ID obtained from the upload response
+*   `bot_token`: Your Telegram Bot API token
+*   `file_id`: The file ID obtained from the upload response
+
+Example:
+
+    curl -X GET "http://localhost:8080/url?bot_token=<your_bot_token>&file_id=<your_file_id>"
+      
+
+### Retrieve File
+
+You can download the file by accessing the secure URL generated after uploading:
+
+*   `/drive/:id`: Endpoint to download the file associated with `:id` (secure ID).
+
+Example:
+
+    curl -OJL http://localhost:8080/drive/<secure_id>
+      
+
+### Get File Information
+
+To get information about a file (including its size and URL), send a GET request to the `/info` endpoint with the following query parameters:
+
+*   `bot_token`: Your Telegram Bot API token
+*   `file_id`: The file ID obtained from the upload response
+
+Example:
+
+    curl -X GET "http://localhost:8080/info?bot_token=<your_bot_token>&file_id=<your_file_id>"
+      
+
+Feel free to adjust the endpoints and placeholders (`<your_bot_token>`, `<your_chat_id>`, `<your_file_id>`, `<secure_id>`) with actual values as per your application's requirements.

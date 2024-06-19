@@ -70,7 +70,7 @@ func main() {
 		})
 	})
 
-	r.POST("/upload", func(c *gin.Context) {
+	r.POST("/send", func(c *gin.Context) {
 		botToken := c.PostForm("bot_token")
 		chatID := c.PostForm("chat_id")
 
@@ -192,7 +192,7 @@ func main() {
 		io.Copy(c.Writer, resp.Body)
 	})
 
-	r.GET("/file-info", func(c *gin.Context) {
+	r.GET("/info", func(c *gin.Context) {
 		botToken := c.Query("bot_token")
 		fileID := c.Query("file_id")
 
