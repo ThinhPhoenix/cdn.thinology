@@ -20,10 +20,14 @@ type Response struct {
 	Data    interface{} `json:"data"`
 }
 
-type ImageData struct {
+type FileData struct {
 	FileID   string `json:"file_id"`
 	FileURL  string `json:"file_url"`
 	FileSize int    `json:"file_size"`
+}
+
+type UrlData struct {
+	FileURL  string `json:"file_url"`
 }
 
 func init() {
@@ -34,11 +38,11 @@ func main() {
 	r := gin.Default()
 
 	// CORS middleware
-    config := cors.DefaultConfig()
-    config.AllowAllOrigins = true
-    r.Use(cors.New(config))
+	config := cors.DefaultConfig()
+	config.AllowAllOrigins = true
+	r.Use(cors.New(config))
 
-	r.GET("/", func(c *gin.Context){
+	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Hello World!",
 		})
@@ -73,7 +77,7 @@ func main() {
 			return
 		}
 
-		imageData := ImageData{
+		fileData := FileData{
 			FileID:   fileID,
 			FileURL:  fileURL,
 			FileSize: fileSize,
@@ -81,8 +85,8 @@ func main() {
 
 		response := Response{
 			Success: true,
-			Message: "Image uploaded successfully",
-			Data:    imageData,
+			Message: "File uploaded successfully",
+			Data:    fileData,
 		}
 
 		jsonResponse, err := json.Marshal(response)
@@ -101,21 +105,20 @@ func main() {
 		fileID := c.Query("file_id")
 
 		fileURL, fileSize, err := getFileInfo(botToken, fileID)
+		_ = fileSize
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get file info: %v", err)})
 			return
 		}
 
-		imageData := ImageData{
-			FileID:   fileID,
-			FileURL:  fileURL,
-			FileSize: fileSize,
+		urlData := UrlData {
+			FileURL: fileURL,
 		}
 
 		response := Response{
 			Success: true,
 			Message: "File URL retrieved successfully",
-			Data:    imageData,
+			Data:    urlData,
 		}
 
 		jsonResponse, err := json.Marshal(response)
@@ -129,7 +132,7 @@ func main() {
 		c.Writer.Write(jsonResponse)
 	})
 
-	r.Run(":"+os.Getenv("PORT"))
+	r.Run(":" + os.Getenv("PORT"))
 }
 
 // Function to send a document using Telegram Bot API sendDocument method
