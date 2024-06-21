@@ -36,7 +36,7 @@ Getting Started
 
 ### Installation
 1.  **Create a bot in Telegram:**
-   https://core.telegram.org/bots/features#:~:text=and%20managing%20bots.-,Creating%20a%20new%20bot,in%20contact%20details%20and%20elsewhere.
+   https://core.telegram.org/bots/features
 
 3.  **Clone the repository:**
 ```bash
