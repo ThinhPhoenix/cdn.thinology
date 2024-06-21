@@ -3,7 +3,7 @@
 cdn.thinology
 ============
 
-`telikou_cdn` is a lightweight Content Delivery Network (CDN) that leverages the Telegram Bot API for file storage and retrieval. This project provides a cost-effective solution for hosting files and serving them via a CDN-like infrastructure using Telegram's robust backend.
+`cdn.thinology` is a lightweight Content Delivery Network (CDN) that leverages the Telegram Bot API for file storage and retrieval. This project provides a cost-effective solution for hosting files and serving them via a CDN-like infrastructure using Telegram's robust backend.
 
 **Author:** Lai Chi Thinh (ThinhPhoenix) - FPT University.
 
