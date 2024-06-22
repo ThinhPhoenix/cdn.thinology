@@ -24,8 +24,8 @@ func main() {
 	r.GET("/url", h.GetFileURL)
 	r.GET("/drive/:id", h.DownloadFile)
 	r.GET("/info", h.GetFileInfo)
-	r.GET("/check", h.CheckBotAndChat)
-	
+	r.GET("/verify", h.CheckBotAndChat)
+
 	r.Run(":" + os.Getenv("PORT"))
 }
 
