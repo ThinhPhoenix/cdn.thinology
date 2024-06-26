@@ -25,6 +25,9 @@ func main() {
 	r.GET("/drive/:id", h.DownloadFile)
 	r.GET("/info", h.GetFileInfo)
 	r.GET("/verify", h.CheckBotAndChat)
+	r.GET("/js", func(c *gin.Context) {
+		c.File("./public.js")
+	})
 
 	r.Run(":" + os.Getenv("PORT"))
 }
